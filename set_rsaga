@@ -1,0 +1,4 @@
+my_env <- rsaga.env(modules = "/usr/lib/x86_64-linux-gnu/saga")
+rsaga.get.modules(env = my_env, libs = "statistics_kriging")
+rsaga.get.usage(env = my_env, lib = "statistics_kriging", 4)
+#rsaga.geoprocessor(env = my_env, lib = "grid_spline", 1, ...)
