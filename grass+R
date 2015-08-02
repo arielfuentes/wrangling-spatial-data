@@ -1,0 +1,6 @@
+#in the terminal
+grass70
+#then
+rstudio
+#in rstudio
+library("rgrass7", lib.loc="~/R/x86_64-pc-linux-gnu-library/3.2")
