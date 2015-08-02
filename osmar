@@ -1,0 +1,13 @@
+library(osmar)
+src <- osmsource_api()
+osm_box <- corner_bbox(res2[1,1], res2[2,1], res2[1,2], res2[2,2])
+zona_res2 <- get_osm(osm_box, source = src, full = T)
+
+summary(zona_res2$nodes)
+osm_tagdf <- as.data.frame(zona_res2$nodes$tags)
+
+am_ids <- find(zona_res2, node(tags(k == "amenity")))
+am <- subset(zona_res2, node_ids = am_ids)
+am_point <- as_sp(am, "point")
+
+spplot(am_point, c("version"))
