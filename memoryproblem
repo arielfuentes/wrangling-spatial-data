@@ -1,0 +1,14 @@
+subtb812_2 <- subtb812[,1:3]
+subtb812_2_2 <- as.ffdf(subtb812_2)
+
+
+x <- as.data.frame(cbind(subtb812_2_2[, 2], subtb812_2_2[,3]))
+y <- as.data.frame(subtb812_2_2[,1])
+stops.sp2 <- SpatialPointsDataFrame(x, y)
+proj4string(obj = stops.sp2) <- CRS("+init=epsg:32719")
+#writeOGR(stops.sp2, ".", "stopstb812", driver = "ESRI Shapefile")
+
+stops.sp2 <- spTransform(stops.sp2, CRS("+proj=longlat +datum=WGS84"))
+
+TRX_buffer12 <- over(buffer, stops.sp2, fn = sum)
+TRX_buffer12v2 <- lapply()
