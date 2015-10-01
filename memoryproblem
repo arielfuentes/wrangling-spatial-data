@@ -13,3 +13,4 @@ stops.sp2 <- spTransform(stops.sp2, CRS("+proj=longlat +datum=WGS84"))
 
 TRX_buffer12 <- over(buffer, stops.sp2, fn = sum)
 TRX_buffer12v2 <- lapply()
+http://gis.stackexchange.com/questions/80373/add-unique-ids-to-mutiple-polygons-using-loop-or-apply-function
