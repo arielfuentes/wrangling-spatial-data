@@ -1,0 +1,6 @@
+library(raster)
+library(rgdal)
+dem <- raster("QGIS/ASTGTM2_S34W072/ASTGTM2_S34W072_dem.tif")
+shape <- readOGR(dsn = "QGIS/merval.shp", layer = "merval")
+point_dem <- extract(dem, shape)
+hist(point_dem[[1]])
