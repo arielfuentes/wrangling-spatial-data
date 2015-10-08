@@ -1,3 +1,6 @@
+############################################################################################
+#memory size
+memory.limit(size = 6000)
 subtb812_2 <- select(.data = subtb812, count, x_subida, y_subida)
 subtb812_2_2 <- as.ffdf(subtb812_2)
 
