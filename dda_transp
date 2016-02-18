@@ -1,0 +1,99 @@
+input_excel <- function(name, n){
+  library(readxl)
+  read_excel(name, sheet = n)
+}
+mov_dic2015 <- input_excel("Movimientos Diciembre 2015 Tripulacion_original.xlsx", 1)
+
+empty_col <- c("Conductores.Nombre", "Planificador", "Obs", "Categoria")
+clean_data <- function(data, drop_col){
+  library(lubridate)
+  drop_col <- names(data) %in% drop_col
+  data <- data[!drop_col]
+  data$Tipo <- ifelse(data$Origenes.Nombre == "DOMICILIO", "R", "Z")
+  data$HoraRol <- substr(data$HoraRol,start = 12, stop = 19)
+  data$HoraRec <- substr(data$HoraRec,start = 12, stop = 19)
+  data$FechaHoraRol <- as.POSIXct(strptime(paste(as.character(data$FechaMovimiento), 
+                                                  data$HoraRol, sep = " "), "%Y-%m-%d %H:%M:%S"))
+  data$FechaHoraRec <- as.POSIXct(strptime(paste(as.character(data$FechaMovimiento), 
+                                                  data$HoraRec, sep = " "), "%Y-%m-%d %H:%M:%S"))
+  data$HoraRol.dt <- hour(data$FechaHoraRol)
+  data$HoraRec.dt <- hour(data$FechaHoraRec)
+  data$periodo <- ifelse(data$HoraRec.dt >= 6 & data$HoraRec.dt <= 9, "PMA", 
+                          ifelse(data$HoraRec.dt >= 10 & data$HoraRec.dt <= 16, "Valle", 
+                                 ifelse(data$HoraRec.dt >= 17 & data$HoraRec.dt <= 21, "PTA", "NOC"))) 
+  data <- data[order(data$FechaMovimiento, data$IDItinerario, data$FechaHoraRol, data$FechaHoraRec),]
+  data
+}
+mov_lan <- clean_data(mov_dic2015, empty_col)
+
+datageo <- function(data){
+  library(dplyr)
+  data %>% filter(!is.na(longitude) & !is.na(latitude) & !is.na(IDItinerario) & !is.na(Tilan))
+}
+mov_langeo <- datageo(mov_lan)
+
+input_aeropuerto <- function(){
+input_aeropuerto <- subset(mov_langeo, subset = !duplicated(mov_langeo$IDItinerario))
+input_aeropuerto$Origenes.Nombre <- ifelse(input_aeropuerto$Tipo == "Z", "aeropuerto", 
+                                           "hacia aeropuerto")
+input_aeropuerto$Destinos.Nombre <- ifelse(input_aeropuerto$Tipo == "R", 
+                                           "aeropuerto", "hacia aeropuerto")
+input_aeropuerto$latitude <- rep(c(-33.39657), nrow(input_aeropuerto))
+input_aeropuerto$longitude <- rep(c(-70.79378), nrow(input_aeropuerto))
+input_aeropuerto$Tilan <- NA
+input_aeropuerto$Expr1001 <- NA
+input_aeropuerto
+}
+
+data_aeropuerto <- input_aeropuerto()
+data_viaje <- function(data1, data2){
+  library(dplyr)
+  data_viaje <- bind_rows(data1, data2)
+  data_viaje <- data_viaje %>% group_by(IDItinerario, FechaMovimiento, Tipo) %>% 
+    mutate(intervalo = ifelse(Tipo == "Z", abs(difftime(max(FechaHoraRec), FechaHoraRol)), 
+                              abs(difftime(min(FechaHoraRec), FechaHoraRol))))
+  data_viaje$intervalo <- ifelse(data_viaje$intervalo >= 2, (data_viaje$intervalo)/60, 
+                                   data_viaje$intervalo)
+  data_viaje <- data_viaje %>% filter(!is.na(IDItinerario))
+  data_viaje
+}
+lan_viaje <- data_viaje(mov_langeo, data_aeropuerto)
+
+lan_viaje.geolinea <- function(tabla_viaje){
+  library(dplyr)
+  library(tidyr)
+  tabla_viaje$coor <- paste(tabla_viaje$longitude, ",", tabla_viaje$latitude)
+  tabla_viaje <- tabla_viaje[c("IDItinerario", "coor")]
+  tabla_viaje <- tabla_viaje %>% group_by(IDItinerario) %>% mutate(idx = row_number()) %>% 
+    spread(idx, coor)
+  tabla_viaje$n_usu <- ncol(tabla_viaje) - 1 - apply(tabla_viaje, 1, function(z) sum(is.na(z)))
+  names(tabla_viaje) <- c("ID", "1", "2", "3", "4", "5", "6", "ncoor")
+  tabla_viaje <- tabla_viaje[c("ID", "ncoor", "1", "2", "3", "4", "5", "6")]
+  tabla_viaje <- sapply(as.list(as.data.frame(t(tabla_viaje))), function(x) {paste(na.omit(x), 
+                                                                                   collapse=",")})
+  write.table(x = tabla_viaje, file = "tabla_viaje.geo", col.names = F, row.names = F, quote = F)
+}
+
+lan_viaje.geolinea(lan_viaje)
+
+lan_viaje.attr <- function(data){
+  library(dplyr)
+  data <- data[c("IDItinerario", "Titulo", "FechaMovimiento", "Tipo", "Movil", "Origenes.Nombre", 
+                 "Destinos.Nombre", "Turno", "Secciones.Nombre", "periodo", "intervalo")]
+  data %>% filter(!duplicated(IDItinerario))
+  names(data)[1] <- "ID"
+  data
+  #write.table(data, file = "data.csv", row.names = F, quote = F, sep = ",")
+}
+
+attributes_langeo <- lan_viaje.attr(lan_viaje)
+
+readruta <- function(){
+  library(rgdal)
+  library(dplyr)
+  rutas <- readOGR(dsn = "transcad/tabla_viaje.shp", layer = "tabla_viaje", p4s = "+proj=longlat")
+  rutas@data <- left_join(x = rutas@data, y = attributes_langeo, by = "ID")
+  rutas
+}
+
+rutasgeo <- readruta()
