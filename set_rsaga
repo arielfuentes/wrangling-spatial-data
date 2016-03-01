@@ -3,3 +3,11 @@ my_env <- rsaga.env(modules = "/usr/lib/x86_64-linux-gnu/saga")
 rsaga.get.modules(env = my_env, libs = "statistics_kriging")
 rsaga.get.usage(env = my_env, lib = "statistics_kriging", 4)
 #rsaga.geoprocessor(env = my_env, lib = "grid_spline", 1, ...)
+################################################################
+library(RSAGA)
+my_env <- rsaga.env(path = "C:/Program Files (x86)/SAGA-GIS")
+my_env$version
+rsaga.get.modules(env = my_env, libs = "statistics_kriging")
+rsaga.get.libraries(path = my_env$modules)
+rsaga.get.modules(libs = "imagery_tools", env = my_env)
+rsaga.get.usage(lib = "imagery_tools", module = "Vegetation Index (Slope Based)", env = my_env)
