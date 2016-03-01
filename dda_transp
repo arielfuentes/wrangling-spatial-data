@@ -97,3 +97,30 @@ readruta <- function(){
 }
 
 rutasgeo <- readruta()
+
+centroides <- read.table("transcad/centroides_ppal.csv", header = T, sep = ",")
+from <- centroides[,2:3]
+to <- c(-70.79378, -33.39657)
+route_df <- route(from = as.numeric(from[1,]), to = to, mode = "driving", structure = "route", )
+qmap("Santiago, Santiago", zoom = 11) +
+  geom_path(
+    aes(x = lon, y = lat),  colour = "red", size = 0.5,
+    data = route_df, lineend = "round"
+  )
+
+f <- list()
+for (i in 1:nrow(centroides)){
+  library(ggmap)
+  f[[i]] <- route(from = as.numeric(from[i,]), to = to, mode = "driving", structure = "route")
+}
+for (i in 1:nrow(centroides)){
+  write.table(x = f[[i]], file = paste("ruta", i, ".csv"), quote = F, sep = ",", row.names = F)
+}
+for (i in 1:nrow(centroides)){
+  my_plot <- qmap("Santiago, Santiago", zoom = 11) +
+    geom_path(
+      aes(x = lon, y = lat),  colour = "red", size = 0.5,
+      data = f[[i]], lineend = "round"
+    )
+  ggsave(my_plot, filename = paste("ruta", i, ".png", sep = ""))
+}
