@@ -50,7 +50,7 @@ rezon <- function(pg.shp, pt.shp, n.pt, n.tree){
   #rm
   rm(d.d.mtx)
   #number of clusters
-  p.l <- lapply(X = tree.l, FUN = function(x) stats::cutree(tree = x, k = n.pt/10))
+  p.l <- lapply(X = tree.l, FUN = function(x) stats::cutree(tree = x, k = n.tree))
   #rm
   rm(tree.l)
   #nodes labels
@@ -67,24 +67,28 @@ rezon <- function(pg.shp, pt.shp, n.pt, n.tree){
   sp.qry.spt <- lapply(X = s, FUN = function(x) sp::split(sp.qry[[x]], sp.qry[[x]]@data$Cr))
   # sp.qry.ctd <- lapply(X = s, FUN = function(x) sapply(sp.qry.spt[[x]], 
   #                             FUN = function(y) geosphere::centroid(slot(y, "coords"))))
-  sp.qry.ct <- lapply(X = s, FUN = function(x) sapply(X = sp.qry.spt[[x]], 
-                              FUN = function(y) geosphere::centroid(slot(y, "coords"))))
-  sp.qry.ct <- lapply(X = s, FUN = function(x) as.data.frame(t(sp.qry.ct[[x]])))
-  for (i in s) {
-    names(sp.qry.ct[[i]]) <- c("lon", "lat")
-  }
+  # sp.qry.ct <- lapply(X = s, FUN = function(x) sapply(X = sp.qry.spt[[x]], 
+  #                            FUN = function(y) geosphere::centroid(slot(y, "coords"))))
+  # sp.qry.ct <- lapply(X = s, FUN = function(x) sapply(X = sp.qry.spt[[x]], 
+  #                            FUN = function(y) if(length(y)>2) geosphere::centroid(slot(y, "coords")) 
+  #                                               else sp::coordinates(slot(y, "coords"))))
+  # sp.qry.ct <- lapply(X = s, FUN = function(x) as.data.frame(t(sp.qry.ct[[x]])))
+  # for (i in s) {
+  #   names(sp.qry.ct[[i]]) <- c("lon", "lat")
+  # }
+  sp.qry.ct <- lapply(sp.qry.spt, getcentroids)
   #rm
   rm(sp.qry.spt)
   #create voronoi polygons 
   sp.qry.vrn <- lapply(X = s, FUN = function(x) dismo::voronoi(sp.qry.ct[[x]], 
-                   ext = c(as.vector(t(pg.ch[x]@bbox)))))
+                   ext = c(as.vector(t(pg.ch[row.names(pg.ch@data) == s,]@bbox)))))
   #voronoi projection
   for (i in s) {
     crs(sp.qry.vrn[[i]]) <- "+proj=longlat"
   } 
   sp.qry.vrn
   #rm
-  rm(sp.qry.ct)
+  #rm(sp.qry.ct)
   #delimited polygons
   sp.qry.itsc <- lapply(X = s, FUN = function(x) rgeos::gIntersection(pg.ch[x,],
                                                                       sp.qry.vrn[[x]], byid = T))
@@ -117,8 +121,9 @@ rezon <- function(pg.shp, pt.shp, n.pt, n.tree){
   rezon.spg.df
 }
 
-x <- rezon(pg.shp = zones, pt.shp = nodes, n.pt = 80)
-rgdal::writeOGR(obj = x, layer = "zonas", driver = "ESRI Shapefile", dsn = "resultado/zonas.shp")
+x <- rezon(pg.shp = zones, pt.shp = nodes, n.pt = 6, n.tree = 6)
+rgdal::writeOGR(obj = x, layer = "zonas", driver = "ESRI Shapefile", dsn = "resultado/zonas6mzn.shp")
 plot(x[[4]])
 x@data
 x[[1]]@data
+plot(x)
